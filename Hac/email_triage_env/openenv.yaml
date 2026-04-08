@@ -1,0 +1,23 @@
+name: email-triage-env
+version: 1.0.0
+description: Email triage and customer support environment
+author: Your Name
+
+observation_space:
+  type: dict
+  properties:
+    email_id: int
+    from_address: str
+    subject: str
+    body: str
+    urgency_keywords: list
+    priority_history: list
+    step: int
+    task: str
+
+action_space:
+  type: int
+  description: "0=Low, 1=Medium, 2=High, 3=Draft, 4=Escalate, 5=Archive"
+  enum: [0, 1, 2, 3, 4, 5]
+
+reward_range: [0.0, 1.0]
