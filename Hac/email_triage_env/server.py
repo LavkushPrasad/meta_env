@@ -1,69 +1,90 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from environment import EmailTriageEnv
 import uvicorn
 import os
+import json
 
 app = FastAPI(title="Email Triage RL Environment")
 
-# Store environment instances per session (simplified)
+# Store environment instances
 envs = {}
 
 class ResetRequest(BaseModel):
     task_name: str = "easy_email_triage"
 
-class ActionRequest(BaseModel):
+class StepRequest(BaseModel):
     action: int
     session_id: str = "default"
 
+@app.get("/")
+async def root():
+    return {
+        "status": "running",
+        "message": "Email Triage RL Environment is live",
+        "endpoints": ["/reset (POST)", "/step (POST)", "/state (GET)"]
+    }
+
 @app.post("/reset")
 async def reset_endpoint(request: ResetRequest = None):
-    task_name = request.task_name if request else "easy_email_triage"
-    session_id = "default"
-    
     try:
+        task_name = request.task_name if request else "easy_email_triage"
+        session_id = "default"
+        
         env = EmailTriageEnv(task_name=task_name)
         envs[session_id] = env
         observation = env.reset()
         
-        return {
-            "status": "success",
+        return JSONResponse(content={
+            "success": True,
             "observation": observation.content,
             "session_id": session_id
-        }
+        })
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
 
 @app.post("/step")
-async def step_endpoint(request: ActionRequest):
+async def step_endpoint(request: StepRequest):
     session_id = request.session_id
-    action_value = request.action
     
     if session_id not in envs:
-        raise HTTPException(status_code=404, detail="Environment not found. Call /reset first.")
+        return JSONResponse(
+            status_code=404,
+            content={"success": False, "error": "Environment not found. Call /reset first."}
+        )
     
     env = envs[session_id]
     
-    # Convert action value to Action object (adjust based on your Action class)
-    from openenv import Action
-    action = Action(value=action_value)
+    # Create action object
+    class Action:
+        def __init__(self, value):
+            self.value = value
     
+    action = Action(request.action)
     observation, reward, done, info = env.step(action)
     
-    return {
+    return JSONResponse(content={
+        "success": True,
         "observation": observation.content,
         "reward": reward.value,
         "done": done,
         "info": info
-    }
+    })
 
 @app.get("/state")
 async def state_endpoint(session_id: str = "default"):
     if session_id not in envs:
-        raise HTTPException(status_code=404, detail="Environment not found")
+        return JSONResponse(
+            status_code=404,
+            content={"success": False, "error": "Environment not found"}
+        )
     
     state = envs[session_id].state()
-    return {"state": state}
+    return JSONResponse(content={"success": True, "state": state})
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 7860))
