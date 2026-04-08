@@ -1,3 +1,0 @@
-openai>=1.0.0
-pydantic>=2.0.0
-openenv>=0.1.0  # Assuming OpenEnv package exists
