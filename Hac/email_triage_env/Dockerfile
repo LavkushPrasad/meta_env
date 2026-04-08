@@ -5,14 +5,16 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Add FastAPI and uvicorn
+RUN pip install fastapi uvicorn
+
 COPY . .
 
 ENV HF_TOKEN=""
-ENV PORT=7860
 ENV PYTHONUNBUFFERED=1
+ENV PORT=7860
 
-# Expose the port for the API server
 EXPOSE 7860
 
-# Run the FastAPI server instead of inference.py
+# Run the server (create server.py as shown below)
 CMD ["python", "server.py"]
